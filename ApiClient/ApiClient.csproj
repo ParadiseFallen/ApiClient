@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandart2.0;netstandart2.1;net5.0</TargetFrameworks>
+    <Authors>FallenParadise</Authors>
+    <Company>FallenParadise</Company>
+    <Product>FallenParadise</Product>
+    <Description>Easy and thin wrap for building api services</Description>
+  </PropertyGroup>
+
+</Project>
