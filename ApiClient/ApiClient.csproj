@@ -6,6 +6,9 @@
     <Company>FallenParadise</Company>
     <Product>FallenParadise</Product>
     <Description>Easy and thin wrap for building api services</Description>
+    <RepositoryUrl>https://github.com/ParadiseFallen/ApiClient</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/ParadiseFallen/ApiClient</PackageProjectUrl>
+    <PackageTags>Rest, Api, Services,</PackageTags>
   </PropertyGroup>
 
 </Project>
