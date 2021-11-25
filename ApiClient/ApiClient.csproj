@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <Authors>FallenParadise</Authors>
     <Company>FallenParadise</Company>
     <Product>FallenParadise</Product>
@@ -10,6 +10,10 @@
     <PackageProjectUrl>https://github.com/ParadiseFallen/ApiClient</PackageProjectUrl>
     <PackageTags>Rest, Api, Services,</PackageTags>
     <PackageId>FallenParadise.ApiClient</PackageId>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <FileVersion>1.0.1</FileVersion>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
 </Project>

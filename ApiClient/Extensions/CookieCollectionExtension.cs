@@ -19,7 +19,7 @@ namespace ApiClient.Extensions
             out Cookie cookie)
         {
             cookie = cookies.GetCookies(uri)[cookieName];
-            return cookie != null;
+            return cookie is not null;
         }
 
     }

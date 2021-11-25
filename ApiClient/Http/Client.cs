@@ -5,19 +5,30 @@ using System.Text.Json;
 
 namespace ApiClient.Http
 {
+    /// <summary>
+    /// <inheritdoc/>
+    /// </summary>
     public class Client : HttpClient
     {
         public JsonSerializerOptions JsonSerializerOptions { get; set; }
+
         public HttpClientHandler HttpHandler { get; }
 
         /// <summary>
         /// Accessor for <c>HttpHandler.CookieContainer</c>
         /// </summary>
-        public CookieContainer Cookies { get => HttpHandler.CookieContainer; set => HttpHandler.CookieContainer = value; }
-
-        public Client(HttpClientHandler handler, JsonSerializerOptions serializerOptions = null) : base(handler, true)
+        public CookieContainer Cookies
         {
-            HttpHandler = handler ?? throw new NullReferenceException("HttpClientHandler can't be null.");
+            get => HttpHandler.CookieContainer;
+            set => HttpHandler.CookieContainer = value;
+        }
+
+        public Client(
+            HttpClientHandler handler = null, 
+            JsonSerializerOptions serializerOptions = null,
+            bool disposeHandler = true) : base(handler, disposeHandler)
+        {
+            HttpHandler = handler ?? new HttpClientHandler();
             JsonSerializerOptions = serializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
         }
 
@@ -27,8 +38,5 @@ namespace ApiClient.Http
                 HttpHandler.Dispose();
             base.Dispose(disposing);
         }
-
-        public static Client Create(HttpClientHandler handler = null, JsonSerializerOptions serializerOptions = null) =>
-            new Client(handler ?? new HttpClientHandler(), serializerOptions);
     }
 }

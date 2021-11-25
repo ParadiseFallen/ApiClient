@@ -23,7 +23,7 @@ namespace ApiClient.Http
         }
 
         protected virtual HttpRequestMessage CreateRequest(HttpMethod method, Uri endpoint) => 
-            new HttpRequestMessage(method, endpoint);
+            new (method, endpoint);
 
         protected virtual JsonContent Json<T>(T payload, MediaTypeHeaderValue mediaTypeHeaderValue = null) =>
             JsonContent.Create(payload, mediaTypeHeaderValue, Client.JsonSerializerOptions);
@@ -31,7 +31,8 @@ namespace ApiClient.Http
         protected virtual async Task<T> ReadBodyAs<T>(
             HttpResponseMessage httpResponseMessage,
             CancellationToken cancellationToken = default) =>
-            await httpResponseMessage.Content.ReadFromJsonAsync<T>(Client.JsonSerializerOptions, cancellationToken);
-
+                await httpResponseMessage
+                    .Content
+                    .ReadFromJsonAsync<T>(Client.JsonSerializerOptions, cancellationToken);
     }
 }
