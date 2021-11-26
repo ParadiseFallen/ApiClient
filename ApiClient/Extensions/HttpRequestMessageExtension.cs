@@ -13,12 +13,9 @@ namespace ApiClient.Extensions
         /// </summary>
         /// <param name="content">Content</param>
         /// <returns><c>HttpRequestMessage</c> with new content</returns>
-        public static HttpRequestMessage WithContent(this HttpRequestMessage message, HttpContent content)
-        {
-            message.Content = content;
-            return message;
-        }
-
+        public static HttpRequestMessage WithContent(this HttpRequestMessage message, HttpContent content) => 
+            message.Configure(message => message.Content = content);
+        
         /// <summary>
         /// Configure <c>HttpRequestMessage</c>
         /// </summary>

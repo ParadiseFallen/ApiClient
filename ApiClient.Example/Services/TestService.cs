@@ -4,10 +4,11 @@ using ApiClient.Interfaces;
 
 namespace ApiClient.Example.Services
 {
-    internal class TestService : HttpServiceBase, ITest
+    internal class TestService : HttpService, ITest
     {
-        public TestService(IHttpRequestMessageFactory messageBuilder, Http.HttpClient httpClient) : base(messageBuilder, httpClient)
+        public TestService(IHttpRequestMessageFactory messageBuilder, CustomHttpClient httpClient) : base(messageBuilder, httpClient)
         {
+
         }
 
         public async Task<bool> Foo()

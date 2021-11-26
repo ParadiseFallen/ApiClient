@@ -6,15 +6,31 @@ using System.Net.Http.Json;
 using System.Text.Json;
 
 var endpoint = "https://google.com";
+//var endpoint = "https://jsonplaceholder.typicode.com/comments";
 
 var client = new HttpClient();
 var messageInvoker = new HttpMessageInvoker(new HttpClientHandler(), true);
-var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = JsonContent.Create<dynamic>(new {  foo = "bar"})};
-var response = await client.SendAsync(request, CancellationToken.None);
-var response2 = await messageInvoker.SendAsync(request, CancellationToken.None);
-Console.WriteLine(response);
-Console.WriteLine(response2);
-Console.ReadKey();
+//using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+
+for (int i = 0; i < 100; i++)
+{
+    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+    client.Timeout = TimeSpan.FromSeconds(.1);
+    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+    Console.WriteLine(response.IsSuccessStatusCode);
+}
+
+for (int i = 0; i < 100; i++)
+{
+    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+    using var response2 = await messageInvoker.SendAsync(request, CancellationToken.None);
+    Console.WriteLine(response2.IsSuccessStatusCode);
+    //Console.WriteLine((await response2.Content.ReadFromJsonAsync<IEnumerable<Payload>>()));
+}
+
+
+
+//Console.ReadKey();
 
 
 //var host = Host
@@ -40,3 +56,12 @@ Console.ReadKey();
 //    services.AddSingleton<DefaultHttpRequestMessageFactory>();
 //    services.AddScoped<TestService>();
 //}
+
+record Payload
+{
+    public int UserId { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    public string Body { get; set; }
+}
