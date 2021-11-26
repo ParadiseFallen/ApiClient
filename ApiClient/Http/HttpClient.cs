@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -8,10 +7,8 @@ namespace ApiClient.Http
     /// <summary>
     /// <inheritdoc/>
     /// </summary>
-    public class Client : HttpClient
+    public class HttpClient : System.Net.Http.HttpClient
     {
-        public JsonSerializerOptions JsonSerializerOptions { get; set; }
-
         public HttpClientHandler HttpHandler { get; }
 
         /// <summary>
@@ -23,20 +20,12 @@ namespace ApiClient.Http
             set => HttpHandler.CookieContainer = value;
         }
 
-        public Client(
-            HttpClientHandler handler = null, 
+        public HttpClient(
+            HttpClientHandler handler = null,
             JsonSerializerOptions serializerOptions = null,
             bool disposeHandler = true) : base(handler, disposeHandler)
         {
             HttpHandler = handler ?? new HttpClientHandler();
-            JsonSerializerOptions = serializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-                HttpHandler.Dispose();
-            base.Dispose(disposing);
         }
     }
 }
