@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using ApiClient.WebSocket.Events;
+using ApiClient.Data.Records;
 
 namespace ApiClient.WebSocket
 {
