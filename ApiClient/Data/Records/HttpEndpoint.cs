@@ -18,5 +18,7 @@ namespace ApiClient.Data.Records
         public HttpMethod Method { get; init; } = null;
 
         public HttpCompletionOption CompletionOption { get; init; } = HttpCompletionOption.ResponseContentRead;
+
+        public override string ToString() => Uri;
     }
 }

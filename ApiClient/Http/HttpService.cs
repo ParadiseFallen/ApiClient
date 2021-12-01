@@ -27,10 +27,11 @@ namespace ApiClient.Http
         }
 
         #region Send
-        protected Task<HttpResponseMessage> SendAsync(
+        protected async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
-            CancellationToken cancellationToken = default) => Http.SendAsync(request, completionOption, cancellationToken);
+            CancellationToken cancellationToken = default) => 
+                await Http.SendAsync(request, completionOption, cancellationToken).ConfigureAwait(false);
 
         protected HttpResponseMessage Send(
              HttpRequestMessage request,
