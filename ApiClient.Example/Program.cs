@@ -1,5 +1,6 @@
 ﻿using ApiClient.Data.Records;
 using ApiClient.Example.Services;
+using ApiClient.Factories;
 using ApiClient.WebSocket;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -18,8 +19,10 @@ const string connectionString = "wss://demo.piesocket.com/v3/channel_1?api_key=o
 //var wsc = new Websocket.Client.WebsocketClient(new Uri(connectionString));
 //wsc.Start();
 
-
-var ws = new WebSocketClient(new Uri(connectionString), () =>
+var ws = new WebSocketClient(
+    new Uri(connectionString),
+    new WebSocketMessageFactory(),
+    () =>
 {
     var socket = new ClientWebSocket();
     return socket;
@@ -28,20 +31,21 @@ var ws = new WebSocketClient(new Uri(connectionString), () =>
     ReciveBufferSize = 4096
 };
 
-ws.MessageRecived.Subscribe((args) =>
-{
-    global::System.Console.WriteLine(Encoding.UTF8.GetString(args.Data));
-});
-ws
-    .MessageRecived
-    .Where(x => x.Type == WebSocketMessageType.Binary)
-    .Select(message =>
-{
-    return new object();
-}).Subscribe(x => { 
-    //
-});
 
+//ws
+//    .MessageRecived
+//    .Where(x => x.Type == WebSocketMessageType.Binary)
+//    .Select(message =>
+//{
+//    return new object();
+//}).Subscribe(x => { 
+//    //
+//});
+
+ws.MessageRecived.Subscribe((eventArgs) =>
+{
+    global::System.Console.WriteLine(Encoding.UTF8.GetString(eventArgs.Message.Data));
+});
 
 await ws.Connect(CancellationToken.None);
 
@@ -55,9 +59,11 @@ do
 {
     Console.Write("Message : ");
     var message = Console.ReadLine();
-    await ws.Send(new WebSocketMessage(Encoding.UTF8.GetBytes(message)));
+    await ws.Send(ws.CreateMessage(message));
+
 } while (true);
 
+record PayloadDto();
 
 //var endpoint = "https://google.com";
 ////var endpoint = "https://jsonplaceholder.typicode.com/comments";

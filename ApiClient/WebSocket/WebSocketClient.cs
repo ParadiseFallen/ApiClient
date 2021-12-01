@@ -9,13 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using ApiClient.Data.Records;
+using ApiClient.Interfaces;
 
 namespace ApiClient.WebSocket
 {
-    public class WebSocketClient : IAsyncDisposable
+    public class WebSocketClient : IAsyncDisposable, IWebSocketMessageFactory
     {
-        //public JsonSerializerOptions JsonSerializerOptions { get; set; }
-
         #region Properties
 
         public Uri Uri { get; init; }
@@ -24,24 +23,29 @@ namespace ApiClient.WebSocket
 
         private ClientWebSocket WebSocket { get; set; } = default!;
         private Func<ClientWebSocket> WebSocketBuilder { get; init; }
-        private Subject<WebSocketMessage> MessageRecivedSubject { get; init; } = new();
+        private IWebSocketMessageFactory MessageFactory { get; init; }
+        private Subject<(WebSocketClient Sender,WebSocketMessage Message)> MessageRecivedSubject { get; init; } = new();
 
         #region Computed
         public WebSocketState State => WebSocket.State;
 
-        public IObservable<WebSocketMessage> MessageRecived => MessageRecivedSubject.AsObservable();
+        public IObservable<(WebSocketClient Sender, WebSocketMessage Message)> MessageRecived => MessageRecivedSubject.AsObservable();
 
         #endregion
 
         #endregion
 
-        public WebSocketClient(Uri uri, Func<ClientWebSocket> wsBuilder = null, JsonSerializerOptions jsonSerializerOptions = null, PipeOptions pipeOptions = null)
+        public WebSocketClient(
+            Uri uri,
+            IWebSocketMessageFactory messageFactory,
+            Func<ClientWebSocket> wsBuilder = null,
+            PipeOptions pipeOptions = null)
         {
             Uri = uri;
+            MessageFactory = messageFactory;
             WebSocketBuilder = wsBuilder ?? (() => new ClientWebSocket());
             var defaultOptions = new PipeOptions(minimumSegmentSize: ReciveBufferSize, pauseWriterThreshold: 0, resumeWriterThreshold: 0);
             RecivePipe = new Pipe(pipeOptions ?? defaultOptions);
-            //JsonSerializerOptions = jsonSerializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
         }
 
 
@@ -51,10 +55,19 @@ namespace ApiClient.WebSocket
             await WebSocket.ConnectAsync(Uri, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task Start()
+        public async Task Start(TaskScheduler taskScheduler = null,CancellationToken cancellationToken = default)
         {
-            // add send loop
-            await Task.WhenAll(Receive());
+            var listenTask =  Task
+                .Factory
+                .StartNew(ListenWebSocket, cancellationToken,
+                TaskCreationOptions.LongRunning,
+                taskScheduler);
+            await listenTask;
+        }
+
+        public async Task Stop(WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure,string message = null,CancellationToken cancellationToken = default)
+        {
+            await WebSocket.CloseAsync(closeStatus, message, cancellationToken);
         }
 
         #region Send
@@ -64,25 +77,9 @@ namespace ApiClient.WebSocket
             await WebSocket.SendAsync(message.Data, message.Type, messageFlags, cancellationToken);
         }
 
-        //public async Task Send(byte[] data, WebSocketMessageType messageType = WebSocketMessageType.Binary, WebSocketMessageFlags messageFlags = WebSocketMessageFlags.EndOfMessage,CancellationToken cancellationToken = default)
-        //{
-        //    await WebSocket.SendAsync(data, messageType, messageFlags, cancellationToken);
-        //}
-
-        //public async Task Send(string text, WebSocketMessageType messageType = WebSocketMessageType.Text, WebSocketMessageFlags messageFlags = WebSocketMessageFlags.EndOfMessage, CancellationToken cancellationToken = default)
-        //{
-        //    await WebSocket.SendAsync(Encoding.UTF8.GetBytes(text), messageType, messageFlags, cancellationToken);
-        //}
-
-        //public async Task Send<T>(T data, WebSocketMessageType messageType = WebSocketMessageType.Text, WebSocketMessageFlags messageFlags = WebSocketMessageFlags.EndOfMessage, CancellationToken cancellationToken = default)
-        //{
-        //    var messageData = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data, JsonSerializerOptions));
-        //    await WebSocket.SendAsync(messageData, messageType, messageFlags, cancellationToken);
-        //}
-
         #endregion
 
-        private async Task Receive()
+        private async Task ListenWebSocket()
         {
             var writer = RecivePipe.Writer;
 
@@ -116,26 +113,24 @@ namespace ApiClient.WebSocket
             {
                 if (reader.TryRead(out var readResult) && readResult.Buffer.Length > 0)
                 {
-                    // allocate buffer with size of message
                     var buffer = new byte[readResult.Buffer.Length];
-                    // copy message bytes to buffer
                     readResult.Buffer.CopyTo(buffer);
-                    // advance memory in pipe
                     reader.AdvanceTo(readResult.Buffer.End);
-                    // create message event args and fire message event args
-                    MessageRecivedSubject.OnNext(new WebSocketMessage(buffer, result.MessageType));
+                    //var x = (Sender: this, Message: MessageFactory.Create(buffer, result.MessageType);
+                    MessageRecivedSubject.OnNext((this,MessageFactory.CreateMessage(buffer, result.MessageType)));
                     return;
                 }
                 // implicit else
-                // handle zero-value message
+                // TODO: handle zero-value message
                 Console.WriteLine($"Zero value was receved");
             }
             catch (Exception)
             {
+                // TODO: hande message read exception
                 throw;
             }
         }
-
+        #region IAsyncDisposible
         public async ValueTask DisposeAsync()
         {
             await RecivePipe.Reader.CompleteAsync().ConfigureAwait(false);
@@ -144,5 +139,18 @@ namespace ApiClient.WebSocket
             WebSocket?.Dispose();
             GC.SuppressFinalize(this);
         }
+        #endregion
+
+        #region IWebSocketMessageFactory
+        
+        public WebSocketMessage CreateMessage(byte[] data, WebSocketMessageType type = WebSocketMessageType.Binary) => MessageFactory.CreateMessage(data,type);
+
+        public WebSocketMessage CreateMessage(string message, WebSocketMessageType type = WebSocketMessageType.Text) => MessageFactory.CreateMessage(message, type);
+        
+        public WebSocketMessage CreateMessage<T>(T data, WebSocketMessageType type = WebSocketMessageType.Binary) => MessageFactory.CreateMessage(data, type);
+
+        public T FromMessage<T>(WebSocketMessage message) => MessageFactory.FromMessage<T>(message);
+
+        #endregion
     }
 }
