@@ -13,7 +13,7 @@ using ApiClient.Interfaces;
 
 namespace ApiClient.WebSocket
 {
-    public class WebSocketClient : IAsyncDisposable, IWebSocketMessageFactory
+    public class WebSocketClient : IAsyncDisposable
     {
         #region Properties
 
@@ -23,13 +23,15 @@ namespace ApiClient.WebSocket
 
         private ClientWebSocket WebSocket { get; set; } = default!;
         private Func<ClientWebSocket> WebSocketBuilder { get; init; }
-        private IWebSocketMessageFactory MessageFactory { get; init; }
-        private Subject<(WebSocketClient Sender,WebSocketMessage Message)> MessageRecivedSubject { get; init; } = new();
+        public IWebSocketMessageFactory MessageFactory { get; init; }
+        private Subject<(IWebSocketMessageFactory MessageFactory,WebSocketMessage Message)> MessageRecivedSubject { get; init; } = 
+            new();
 
         #region Computed
         public WebSocketState State => WebSocket.State;
 
-        public IObservable<(WebSocketClient Sender, WebSocketMessage Message)> MessageRecived => MessageRecivedSubject.AsObservable();
+        public IObservable<(IWebSocketMessageFactory MessageFactory, WebSocketMessage Message)> MessageRecived => 
+            MessageRecivedSubject.AsObservable();
 
         #endregion
 
@@ -57,12 +59,13 @@ namespace ApiClient.WebSocket
 
         public async Task Start(TaskScheduler taskScheduler = null,CancellationToken cancellationToken = default)
         {
-            var listenTask =  Task
-                .Factory
-                .StartNew(ListenWebSocket, cancellationToken,
-                TaskCreationOptions.LongRunning,
-                taskScheduler);
-            await listenTask;
+            //var listenTask =  Task
+            //    .Factory
+            //    .StartNew(()=> , cancellationToken,
+            //    TaskCreationOptions.LongRunning,
+            //    taskScheduler);
+            //await listenTask;
+            await ListenWebSocket();
         }
 
         public async Task Stop(WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure,string message = null,CancellationToken cancellationToken = default)
@@ -117,7 +120,7 @@ namespace ApiClient.WebSocket
                     readResult.Buffer.CopyTo(buffer);
                     reader.AdvanceTo(readResult.Buffer.End);
                     //var x = (Sender: this, Message: MessageFactory.Create(buffer, result.MessageType);
-                    MessageRecivedSubject.OnNext((this,MessageFactory.CreateMessage(buffer, result.MessageType)));
+                    MessageRecivedSubject.OnNext((MessageFactory,MessageFactory.CreateMessage(buffer, result.MessageType)));
                     return;
                 }
                 // implicit else
@@ -141,16 +144,5 @@ namespace ApiClient.WebSocket
         }
         #endregion
 
-        #region IWebSocketMessageFactory
-        
-        public WebSocketMessage CreateMessage(byte[] data, WebSocketMessageType type = WebSocketMessageType.Binary) => MessageFactory.CreateMessage(data,type);
-
-        public WebSocketMessage CreateMessage(string message, WebSocketMessageType type = WebSocketMessageType.Text) => MessageFactory.CreateMessage(message, type);
-        
-        public WebSocketMessage CreateMessage<T>(T data, WebSocketMessageType type = WebSocketMessageType.Binary) => MessageFactory.CreateMessage(data, type);
-
-        public T FromMessage<T>(WebSocketMessage message) => MessageFactory.FromMessage<T>(message);
-
-        #endregion
     }
 }

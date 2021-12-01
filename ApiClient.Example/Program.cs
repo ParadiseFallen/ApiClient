@@ -59,7 +59,7 @@ do
 {
     Console.Write("Message : ");
     var message = Console.ReadLine();
-    await ws.Send(ws.CreateMessage(message));
+    await ws.Send(ws.MessageFactory.CreateMessage(message));
 
 } while (true);
 
