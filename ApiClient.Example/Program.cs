@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using System.Buffers;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
+using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -31,6 +32,16 @@ ws.MessageRecived.Subscribe((args) =>
 {
     global::System.Console.WriteLine(Encoding.UTF8.GetString(args.Data));
 });
+ws
+    .MessageRecived
+    .Where(x => x.Type == WebSocketMessageType.Binary)
+    .Select(message =>
+{
+    return new object();
+}).Subscribe(x => { 
+    //
+});
+
 
 await ws.Connect(CancellationToken.None);
 

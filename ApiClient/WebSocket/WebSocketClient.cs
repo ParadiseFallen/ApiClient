@@ -54,7 +54,7 @@ namespace ApiClient.WebSocket
         public async Task Start()
         {
             // add send loop
-            await Task.WhenAll(Recive());
+            await Task.WhenAll(Receive());
         }
 
         #region Send
@@ -82,7 +82,7 @@ namespace ApiClient.WebSocket
 
         #endregion
 
-        private async Task Recive()
+        private async Task Receive()
         {
             var writer = RecivePipe.Writer;
 
