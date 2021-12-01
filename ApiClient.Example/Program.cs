@@ -1,6 +1,6 @@
-﻿using ApiClient.Example.Services;
+﻿using ApiClient.Data.Records;
+using ApiClient.Example.Services;
 using ApiClient.WebSocket;
-using ApiClient.WebSocket.Events;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

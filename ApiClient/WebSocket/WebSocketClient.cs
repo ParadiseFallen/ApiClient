@@ -35,7 +35,7 @@ namespace ApiClient.WebSocket
 
         #endregion
 
-        public WebSocketClient(Uri uri, Func<ClientWebSocket>? wsBuilder = null, JsonSerializerOptions? jsonSerializerOptions = null, PipeOptions? pipeOptions = null)
+        public WebSocketClient(Uri uri, Func<ClientWebSocket> wsBuilder = null, JsonSerializerOptions jsonSerializerOptions = null, PipeOptions pipeOptions = null)
         {
             Uri = uri;
             WebSocketBuilder = wsBuilder ?? (() => new ClientWebSocket());

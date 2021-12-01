@@ -7,6 +7,8 @@ namespace ApiClient.Data.Records
     /// </summary>
     public record HttpEndpoint
     {
+        public HttpEndpoint() { }
+
         public HttpEndpoint(
             string uri = null,
             HttpMethod method = null,
