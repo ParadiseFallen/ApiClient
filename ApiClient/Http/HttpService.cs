@@ -1,5 +1,6 @@
 ﻿using ApiClient.Data.Records;
-using ApiClient.Interfaces;
+using ApiClient.Interfaces.Http;
+
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -30,7 +31,7 @@ namespace ApiClient.Http
         protected async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
-            CancellationToken cancellationToken = default) => 
+            CancellationToken cancellationToken = default) =>
                 await Http.SendAsync(request, completionOption, cancellationToken).ConfigureAwait(false);
 
         protected HttpResponseMessage Send(
@@ -48,7 +49,7 @@ namespace ApiClient.Http
         /// <param name="endpoint">uri</param>
         /// <returns><c>HttpRequestMessage</c></returns>
         protected static HttpRequestMessage CreateRequestMessage(HttpMethod method, Uri endpoint) =>
-            new (method, endpoint);
+            new(method, endpoint);
 
         /// <summary>
         /// Create <c>HttpRequestMessage</c> from given <c>HttpMethod</c> and Uri
@@ -57,7 +58,7 @@ namespace ApiClient.Http
         /// <param name="endpoint">uri</param>
         /// <returns><c>HttpRequestMessage</c></returns>
         protected static HttpRequestMessage CreateRequestMessage(HttpMethod method, string endpoint) =>
-            new (method, endpoint);
+            new(method, endpoint);
 
         /// <summary>
         /// Create <c>HttpRequestMessage</c> from given <c>HttpEndpoint</c>
@@ -66,7 +67,7 @@ namespace ApiClient.Http
         /// <param name="endpoint"><c>HttpEndpoint</c></param>
         /// <returns><c>HttpRequestMessage</c></returns>
         protected static HttpRequestMessage CreateRequestMessage(HttpEndpoint endpoint) =>
-            new (endpoint.Method,endpoint.Uri);
+            new(endpoint.Method, endpoint.Uri);
 
         #endregion
 
@@ -86,7 +87,7 @@ namespace ApiClient.Http
 
     public abstract class HttpService : HttpService<DefaultHttpClient>
     {
-        protected HttpService(DefaultHttpClient http, JsonSerializerOptions jsonSerializerOptions = null) : base(http, jsonSerializerOptions)
+        public HttpService(DefaultHttpClient http, JsonSerializerOptions jsonSerializerOptions = null) : base(http, jsonSerializerOptions)
         {
         }
     }

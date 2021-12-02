@@ -4,12 +4,15 @@ using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 using ApiClient.Data.Records;
-using ApiClient.Interfaces;
+using ApiClient.Interfaces.WebSocket;
+
+using Microsoft.Extensions.Logging;
+
+using Polly;
 
 namespace ApiClient.WebSocket
 {
@@ -18,93 +21,155 @@ namespace ApiClient.WebSocket
         #region Properties
 
         public Uri Uri { get; init; }
-        private Pipe RecivePipe { get; init; }
         public int ReciveBufferSize { get; set; } = 2048;
+        public IWebSocketMessageConverter MessageConvereter { get; init; }
 
-        private ClientWebSocket WebSocket { get; set; } = default!;
-        private Func<ClientWebSocket> WebSocketBuilder { get; init; }
-        public IWebSocketMessageFactory MessageFactory { get; init; }
-        private Subject<(IWebSocketMessageFactory MessageFactory,WebSocketMessage Message)> MessageRecivedSubject { get; init; } = 
+        protected bool IsStarted { get; set; } = false;
+
+        protected Pipe RecivePipe { get; init; }
+        protected AsyncPolicy ExecutionPolicy { get; init; }
+        protected ClientWebSocket WebSocket { get; set; } = default!;
+        protected Func<ClientWebSocket> WebSocketBuilder { get; init; }
+        protected ILogger<WebSocketClient> Logger { get; init; }
+
+        protected Subject<(IWebSocketMessageConverter MessageFactory, WebSocketMessage Message)> MessageRecivedSubject { get; init; } =
             new();
+
+        protected Subject<Exception> ExceptionSubject { get; init; } =
+            new();
+
+        protected event Action OnConnected;
+
+        protected event Action OnDisconected;
 
         #region Computed
         public WebSocketState State => WebSocket.State;
 
-        public IObservable<(IWebSocketMessageFactory MessageFactory, WebSocketMessage Message)> MessageRecived => 
+        public IObservable<(IWebSocketMessageConverter MessageFactory, WebSocketMessage Message)> MessageRecived =>
             MessageRecivedSubject.AsObservable();
 
+        public IObservable<Exception> OnException =>
+            ExceptionSubject.AsObservable();
+
+
         #endregion
+
+
 
         #endregion
 
         public WebSocketClient(
             Uri uri,
-            IWebSocketMessageFactory messageFactory,
+            IWebSocketMessageConverter messageFactory,
             Func<ClientWebSocket> wsBuilder = null,
-            PipeOptions pipeOptions = null)
+            AsyncPolicy executionPolicy = null,
+            PipeOptions pipeOptions = null,
+            ILogger<WebSocketClient> logger = null)
         {
             Uri = uri;
-            MessageFactory = messageFactory;
+            MessageConvereter = messageFactory;
+            Logger = logger;
             WebSocketBuilder = wsBuilder ?? (() => new ClientWebSocket());
-            var defaultOptions = new PipeOptions(minimumSegmentSize: ReciveBufferSize, pauseWriterThreshold: 0, resumeWriterThreshold: 0);
+
+            ExecutionPolicy = executionPolicy ?? Policy.NoOpAsync();
+
+            var defaultOptions = new PipeOptions(
+                minimumSegmentSize: ReciveBufferSize,
+                pauseWriterThreshold: 0,
+                resumeWriterThreshold: 0);
+
             RecivePipe = new Pipe(pipeOptions ?? defaultOptions);
         }
 
 
-        public async Task Connect(CancellationToken cancellationToken)
+
+
+        public async Task Start(CancellationToken cancellationToken = default)
+        {
+            if (IsStarted)
+                throw new InvalidOperationException("Start already called");
+
+            IsStarted = true;
+
+            await ExecutionPolicy.ExecuteAsync(async (token) =>
+            {
+                try
+                {
+                    if (WebSocket is null || State != WebSocketState.Open)
+                        await Reconnect(token);
+                    await ListenWebSocket(token);
+                }
+                catch (Exception ex)
+                {
+                    ExceptionSubject.OnNext(ex);
+                    Logger.LogError(ex, "Exception in main loop");
+                    throw;
+                }
+            }, cancellationToken);
+        }
+
+        public async Task Stop(
+            WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure,
+            string message = null,
+            CancellationToken cancellationToken = default)
+        {
+
+            await WebSocket.CloseAsync(closeStatus, message, cancellationToken).ConfigureAwait(false);
+            WebSocket = null;
+            IsStarted = false;
+        }
+
+        public async Task Send(
+            WebSocketMessage message,
+            WebSocketMessageFlags messageFlags = WebSocketMessageFlags.EndOfMessage,
+            CancellationToken cancellationToken = default) =>
+                await WebSocket.SendAsync(message.Data, message.Type, messageFlags, cancellationToken).ConfigureAwait(false);
+
+        protected async Task Connect(CancellationToken cancellationToken = default)
         {
             WebSocket = WebSocketBuilder();
             await WebSocket.ConnectAsync(Uri, cancellationToken).ConfigureAwait(false);
+            OnConnected?.Invoke();
         }
 
-        public async Task Start(TaskScheduler taskScheduler = null,CancellationToken cancellationToken = default)
+        protected async Task Reconnect(CancellationToken cancellationToken = default)
         {
-            //var listenTask =  Task
-            //    .Factory
-            //    .StartNew(()=> , cancellationToken,
-            //    TaskCreationOptions.LongRunning,
-            //    taskScheduler);
-            //await listenTask;
-            await ListenWebSocket();
+            WebSocket?.Abort();
+            WebSocket?.Dispose();
+            await Connect(cancellationToken);
         }
 
-        public async Task Stop(WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure,string message = null,CancellationToken cancellationToken = default)
-        {
-            await WebSocket.CloseAsync(closeStatus, message, cancellationToken);
-        }
-
-        #region Send
-
-        public async Task Send(WebSocketMessage message, WebSocketMessageFlags messageFlags = WebSocketMessageFlags.EndOfMessage, CancellationToken cancellationToken = default)
-        {
-            await WebSocket.SendAsync(message.Data, message.Type, messageFlags, cancellationToken);
-        }
-
-        #endregion
-
-        private async Task ListenWebSocket()
+        private async Task ListenWebSocket(CancellationToken cancellationToken = default)
         {
             var writer = RecivePipe.Writer;
-
             try
             {
                 while (State == WebSocketState.Open)
                 {
-                    var result = await WebSocket.ReceiveAsync(writer.GetMemory(ReciveBufferSize), CancellationToken.None).ConfigureAwait(false);
+                    var result = await WebSocket.ReceiveAsync(
+                        writer.GetMemory(ReciveBufferSize),
+                        cancellationToken)
+                            .ConfigureAwait(false);
                     // say how much bytes was written
                     writer.Advance(result.Count);
 
                     if (result.EndOfMessage)
                     {
                         // flush n fire event
-                        await writer.FlushAsync().ConfigureAwait(false);
-                        NotifyMessageRecived(result);
+                        await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+                        if (result.MessageType == WebSocketMessageType.Close)
+                        {
+                            OnDisconected?.Invoke();
+                            return;
+                        }
+                        else
+                            NotifyMessageRecived(result);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Logger?.LogError(ex, $"Error while listining ClientWebSocket");
                 throw;
             }
         }
@@ -119,30 +184,35 @@ namespace ApiClient.WebSocket
                     var buffer = new byte[readResult.Buffer.Length];
                     readResult.Buffer.CopyTo(buffer);
                     reader.AdvanceTo(readResult.Buffer.End);
-                    //var x = (Sender: this, Message: MessageFactory.Create(buffer, result.MessageType);
-                    MessageRecivedSubject.OnNext((MessageFactory,MessageFactory.CreateMessage(buffer, result.MessageType)));
+                    MessageRecivedSubject.OnNext((MessageConvereter, MessageConvereter.CreateMessage(buffer, result.MessageType)));
                     return;
                 }
                 // implicit else
-                // TODO: handle zero-value message
-                Console.WriteLine($"Zero value was receved");
+                Logger?.LogInformation($"Message with zero payload recived. [{result.MessageType}]");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: hande message read exception
+                Logger?.LogError(ex, $"Error while reading recived message");
                 throw;
             }
         }
+
         #region IAsyncDisposible
+
         public async ValueTask DisposeAsync()
         {
             await RecivePipe.Reader.CompleteAsync().ConfigureAwait(false);
             await RecivePipe.Writer.CompleteAsync().ConfigureAwait(false);
             WebSocket?.Abort();
             WebSocket?.Dispose();
+            ExceptionSubject.OnCompleted();
+            MessageRecivedSubject.OnCompleted();
+            ExceptionSubject.Dispose();
+            MessageRecivedSubject.Dispose();
+
             GC.SuppressFinalize(this);
         }
-        #endregion
 
+        #endregion
     }
 }

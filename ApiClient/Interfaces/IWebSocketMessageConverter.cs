@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net.WebSockets;
 
 using ApiClient.Data.Records;
 
-namespace ApiClient.Interfaces
+namespace ApiClient.Interfaces.WebSocket
 {
-    public interface IWebSocketMessageFactory
+    public interface IWebSocketMessageConverter
     {
         WebSocketMessage CreateMessage(byte[] data, WebSocketMessageType type = WebSocketMessageType.Binary);
         WebSocketMessage CreateMessage(string message, WebSocketMessageType type = WebSocketMessageType.Text);
         WebSocketMessage CreateMessage<T>(T data, WebSocketMessageType type = WebSocketMessageType.Binary);
-        T FromMessage<T>(WebSocketMessage message);
+        T ConvertTo<T>(WebSocketMessage message);
+        string ConvertToString(WebSocketMessage message);
     }
 }

@@ -5,9 +5,14 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiClient", "ApiClient\ApiClient.csproj", "{388F246C-1266-4349-BFF3-2F7AB446185D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiClient.Example", "ApiClient.Example\ApiClient.Example.csproj", "{2A24CD68-535F-4366-B1D1-0A20FEEF2E4B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiClient.Example", "ApiClient.Example\ApiClient.Example.csproj", "{2A24CD68-535F-4366-B1D1-0A20FEEF2E4B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiClient.Tests", "ApiClient.Tests\ApiClient.Tests.csproj", "{DA405DFD-E9F3-4BA7-BE6B-E7C4732F79F9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiClient.Tests", "ApiClient.Tests\ApiClient.Tests.csproj", "{DA405DFD-E9F3-4BA7-BE6B-E7C4732F79F9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{391F988A-B6A5-4DB6-953B-FF7F088E3EF9}"
+	ProjectSection(SolutionItems) = preProject
+		readme.md = readme.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

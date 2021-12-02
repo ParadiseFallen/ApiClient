@@ -13,15 +13,13 @@ using System.Text;
 using System.Text.Json;
 
 
-const string connectionString = "wss://demo.piesocket.com/v3/channel_1?api_key=oCdCMcMPQpbvNjUIzqtvF1d2X2okWpDQj4AwARJuAgtjhzKxVEjQU6IdCjwm&notify_self";
-//const string connectionString = "ws://localhost:8999";
-
-//var wsc = new Websocket.Client.WebsocketClient(new Uri(connectionString));
-//wsc.Start();
+//const string connectionString = "wss://demo.piesocket.com/v3/channel_1?api_key=oCdCMcMPQpbvNjUIzqtvF1d2X2okWpDQj4AwARJuAgtjhzKxVEjQU6IdCjwm&notify_self";
+const string connectionString = "ws://localhost:8999";
 
 var ws = new WebSocketClient(
     new Uri(connectionString),
-    new WebSocketMessageFactory(),
+    new WebSocketMessageConverter(),
+    
     () =>
 {
     var socket = new ClientWebSocket();
@@ -47,19 +45,19 @@ ws.MessageRecived.Subscribe((eventArgs) =>
     global::System.Console.WriteLine(Encoding.UTF8.GetString(eventArgs.Message.Data));
 });
 
-await ws.Connect(CancellationToken.None);
+//await ws.Connect(CancellationToken.None);
 
 
 
 ws.Start();
 
 
-
 do
 {
+    ws.Start();
     Console.Write("Message : ");
     var message = Console.ReadLine();
-    await ws.Send(ws.MessageFactory.CreateMessage(message));
+    await ws.Send(ws.MessageConvereter.CreateMessage(message));
 
 } while (true);
 
